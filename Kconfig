@@ -141,6 +141,22 @@ config PMW3610_ORIENTATION_270
 
 endchoice
 
+config PMW3610_ROTATION_DEG
+    int "Extra rotation of the pointer output, in degrees (0-359, clockwise on screen)"
+    default 0
+    range 0 359
+    help
+      Rotates the pointer output by an arbitrary angle, applied after
+      PMW3610_ORIENTATION_* and PMW3610_INVERT_*. Use this to compensate for
+      the angle of the hand on a tented/splayed keyboard, where the 90 degree
+      steps of PMW3610_ORIENTATION_* are too coarse.
+
+      Positive values rotate the cursor clockwise on screen. Example: if
+      rolling the ball straight up moves the cursor up and to the LEFT,
+      increase this value until the cursor travels straight up.
+
+      0 disables the rotation entirely (no code, no runtime cost).
+
 config PMW3610_INVERT_X
   bool "Invert the X axis of PMW3610 sensor"
 

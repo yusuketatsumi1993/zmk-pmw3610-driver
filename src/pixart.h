@@ -28,6 +28,11 @@ struct pixart_data {
     int32_t ball_action_delta_x;
     int32_t ball_action_delta_y;
 
+    // CONFIG_PMW3610_ROTATION_DEG の端数。整数演算で切り捨てた分を次回に持ち越し、
+    // 微小な動きが失われないようにする。
+    int32_t rotation_remainder_x;
+    int32_t rotation_remainder_y;
+
 #ifdef CONFIG_PMW3610_POLLING_RATE_125_SW
     int64_t last_poll_time;
     int16_t last_x;

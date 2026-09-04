@@ -597,6 +597,38 @@ static enum pixart_input_mode get_input_mode_for_current_layer(const struct devi
     return MOVE;
 }
 
+#if CONFIG_PMW3610_ROTATION_DEG != 0
+/* 任意角度の回転（CONFIG_PMW3610_ROTATION_DEG）。
+   浮動小数点を使わずに済むよう、sin を 1024 倍した 0〜90 度の四分表を持ち、
+   対称性から全周の値を導く。テーブル誤差は最大 0.0005（実測）。 */
+static const int16_t pmw3610_sin_q1_1024[91] = {
+        0,    18,    36,    54,    71,    89,   107,   125,   143,   160,
+      178,   195,   213,   230,   248,   265,   282,   299,   316,   333,
+      350,   367,   384,   400,   416,   433,   449,   465,   481,   496,
+      512,   527,   543,   558,   573,   587,   602,   616,   630,   644,
+      658,   672,   685,   698,   711,   724,   737,   749,   761,   773,
+      784,   796,   807,   818,   828,   839,   849,   859,   868,   878,
+      887,   896,   904,   912,   920,   928,   935,   943,   949,   956,
+      962,   968,   974,   979,   984,   989,   994,   998,  1002,  1005,
+     1008,  1011,  1014,  1016,  1018,  1020,  1022,  1023,  1023,  1024,
+     1024
+};
+
+static int16_t pmw3610_sin_1024(int deg) {
+    deg = ((deg % 360) + 360) % 360;
+    if (deg <= 90) {
+        return pmw3610_sin_q1_1024[deg];
+    } else if (deg <= 180) {
+        return pmw3610_sin_q1_1024[180 - deg];
+    } else if (deg <= 270) {
+        return -pmw3610_sin_q1_1024[deg - 180];
+    }
+    return -pmw3610_sin_q1_1024[360 - deg];
+}
+
+static int16_t pmw3610_cos_1024(int deg) { return pmw3610_sin_1024(deg + 90); }
+#endif /* CONFIG_PMW3610_ROTATION_DEG != 0 */
+
 static int pmw3610_report_data(const struct device *dev) {
     struct pixart_data *data = dev->data;
     uint8_t buf[PMW3610_BURST_SIZE];
@@ -683,6 +715,22 @@ static int pmw3610_report_data(const struct device *dev) {
     if (IS_ENABLED(CONFIG_PMW3610_INVERT_Y)) {
         y = -y;
     }
+
+#if CONFIG_PMW3610_ROTATION_DEG != 0
+    {
+        /* 画面座標（+X が右・+Y が下）での時計回り回転。
+           切り捨てた端数は次回に持ち越すので、ゆっくり動かしても取りこぼさない。 */
+        const int32_t cos_v = pmw3610_cos_1024(CONFIG_PMW3610_ROTATION_DEG);
+        const int32_t sin_v = pmw3610_sin_1024(CONFIG_PMW3610_ROTATION_DEG);
+        const int32_t rot_x = (int32_t)x * cos_v - (int32_t)y * sin_v + data->rotation_remainder_x;
+        const int32_t rot_y = (int32_t)x * sin_v + (int32_t)y * cos_v + data->rotation_remainder_y;
+
+        x = (int16_t)(rot_x / 1024);
+        y = (int16_t)(rot_y / 1024);
+        data->rotation_remainder_x = rot_x - (int32_t)x * 1024;
+        data->rotation_remainder_y = rot_y - (int32_t)y * 1024;
+    }
+#endif
 
 #ifdef CONFIG_PMW3610_SMART_ALGORITHM
     int16_t shutter =

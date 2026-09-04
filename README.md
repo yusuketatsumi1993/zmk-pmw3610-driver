@@ -1,3 +1,18 @@
+> **このフォークについて（yusuketatsumi1993）**
+>
+> 本家 [keebJP/zmk-pmw3610-driver](https://github.com/keebJP/zmk-pmw3610-driver) に
+> **`CONFIG_PMW3610_ROTATION_DEG`（任意角度の回転）** を追加したもの。
+> 本家の `CONFIG_PMW3610_ORIENTATION_*` は 90 度刻みしか選べないため、
+> テンティングや手の角度による「真上に転がすと斜めに動く」ズレを補正できない。
+>
+> ```
+> CONFIG_PMW3610_ROTATION_DEG=30   # 0〜359。画面上で時計回りに回す角度
+> ```
+>
+> `ORIENTATION_*` と `INVERT_*` を適用した後にかかる。0 なら回転処理ごとコンパイルから外れる。
+> 整数演算のみ（sin を 1024 倍した四分表）で、切り捨てた端数は次回に持ち越すため
+> ゆっくり動かしても取りこぼさない。
+
 PMW3610 driver implementation for ZMK with at least Zephyr 3.5
 
 This work is based on [ufan's implementation](https://github.com/ufan/zmk/tree/support-trackpad) of the driver.
